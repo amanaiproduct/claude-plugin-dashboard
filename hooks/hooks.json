@@ -1,0 +1,15 @@
+{
+  "description": "Dashboard plugin hooks - injects per-turn tool visualization instructions",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks-handlers/session-start.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

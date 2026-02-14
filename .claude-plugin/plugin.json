@@ -1,0 +1,8 @@
+{
+  "name": "plugin-dashboard",
+  "description": "ASCII dashboard showing which tools/plugins were used on every turn of Claude Code, with badge and box display modes",
+  "author": {
+    "name": "Aman Khan",
+    "email": "aman@amankhan.com"
+  }
+}
