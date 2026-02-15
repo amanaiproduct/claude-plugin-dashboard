@@ -1,5 +1,5 @@
 {
-  "description": "Dashboard plugin hooks - injects per-turn tool visualization instructions",
+  "description": "Dashboard plugin hooks - tool badge and session init",
   "hooks": {
     "SessionStart": [
       {
@@ -7,6 +7,16 @@
           {
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks-handlers/session-start.sh"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks-handlers/stop.sh"
           }
         ]
       }
