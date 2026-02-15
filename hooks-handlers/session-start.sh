@@ -36,7 +36,7 @@ cat << OUTER_EOF
 {
   "hookSpecificOutput": {
     "hookEventName": "SessionStart",
-    "additionalContext": "## Tool Badge\n\nAfter EVERY response where you used tools, your FINAL action MUST be calling the badge script via Bash. Never output the badge as text.\n\n### Categories\nmcp (mcp__* tools) · file (Read,Write,Edit,Glob,Grep,NotebookEdit) · agent (Task) · sh (Bash) · web (WebSearch,WebFetch) · skill (Skill) · todo (TaskCreate,TaskUpdate,TaskList,TaskGet)\n\n### MANDATORY: Call this as your last Bash action\nRun: ${CLAUDE_PLUGIN_ROOT}/scripts/badge.sh with quoted args for each category used.\nExample for file+shell tools: ${CLAUDE_PLUGIN_ROOT}/scripts/badge.sh 'file:Read,Grep' 'sh:git status'\nExample for all three: ${CLAUDE_PLUGIN_ROOT}/scripts/badge.sh 'file:Read' 'sh:git' 'mcp:manager-ai'\nOutput: ╶─ file:Read,Grep · sh:git · mcp:manager-ai ─╴ (with sunset ANSI colors)\nOmit categories not used this turn. Bash description: Render tool badge"
+    "additionalContext": "## Tool Badge\n\nAfter EVERY response where you used tools, render a one-line tool summary as plain text at the very end of your response.\n\n### Categories\nmcp (mcp__* tools, show server name) · file (Read,Write,Edit,Glob,Grep,NotebookEdit) · agent (Task) · sh (Bash) · web (WebSearch,WebFetch) · skill (Skill) · todo (TaskCreate,TaskUpdate,TaskList,TaskGet)\n\n### Format\n╶─ file:Read,Grep · sh:git · mcp:manager-ai ─╴\n\nRules: one line, ╶─ and ─╴ delimiters, category:tools pairs separated by · (middle dot), omit unused categories. Do not wrap in a code block."
   }
 }
 OUTER_EOF
