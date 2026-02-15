@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
 # render-dashboard.sh - Full ASCII system map for Claude Code
-# Theme: Sunset (warm ambers, coral, peach)
-# Discovers all MCP servers, plugins, agents, skills, and hooks
+# Uses double-line box-drawing with ANSI sunset color theme
+# (ANSI codes render in Claude Code Bash tool output)
 
 set -euo pipefail
 
@@ -10,37 +10,26 @@ CLAUDE_DIR="${HOME}/.claude"
 PROJECT_CLAUDE_DIR=".claude"
 WIDTH=58
 
-# ── Sunset Color Palette ────────────────────────────────
+# ── Sunset Theme Colors ────────────────────────────────
+RST='\033[0m'
+BOLD='\033[1m'
+DIM='\033[2m'
 
-RST=$'\033[0m'
-BOLD=$'\033[1m'
+BORDER='\033[38;5;173m'    # terracotta (box borders)
+HEADER='\033[38;5;216m'    # peach (section titles)
+ACCENT='\033[38;5;180m'    # wheat (metadata labels)
 
-BORDER=$'\033[38;5;173m'    # terracotta
-HEADER=$'\033[38;5;216m'    # peach
-ACCENT=$'\033[38;5;180m'    # wheat
+C_MCP='\033[38;5;209m'     # coral
+C_FILE='\033[38;5;180m'    # tan
+C_AGENT='\033[38;5;222m'   # golden
+C_SKILL='\033[38;5;215m'   # light orange
+C_HOOK='\033[38;5;174m'    # dusty pink
 
-C_MCP=$'\033[38;5;209m'     # coral
-C_PLUGIN=$'\033[38;5;180m'  # tan
-C_AGENT=$'\033[38;5;222m'   # golden
-C_SKILL=$'\033[38;5;215m'   # light orange
-C_HOOK=$'\033[38;5;174m'    # dusty pink
-
-WHITE=$'\033[38;5;255m'
-DARKGRAY=$'\033[38;5;240m'
+WHITE='\033[38;5;255m'
+GRAY='\033[38;5;245m'
+DARKGRAY='\033[38;5;240m'
 
 # ── Helper functions ────────────────────────────────────
-
-# Strip ANSI escape sequences for display-width measurement
-strip_ansi() {
-  printf '%s' "$1" | sed $'s/\033\\[[0-9;]*m//g'
-}
-
-# Get visible character count (excluding ANSI codes)
-visible_len() {
-  local stripped
-  stripped=$(strip_ansi "$1")
-  printf '%s' "$stripped" | wc -m | tr -d ' '
-}
 
 # Print N copies of a character
 repeat_char() {
@@ -48,33 +37,29 @@ repeat_char() {
   for ((i = 0; i < n; i++)); do printf '%s' "$char"; done
 }
 
-# Print a box line with colored borders and proper padding
+# Print a box line with double-line borders and proper padding
+# Strips ANSI codes for width calculation but preserves them in output
 box_line() {
   local content="$1"
   local inner=$((WIDTH - 4))  # "║  " (3) + "║" (1)
-  local vis
-  vis=$(visible_len "$content")
-  local pad=$((inner - vis))
+  # Strip ANSI codes for visible width calculation
+  local stripped
+  stripped=$(printf '%b' "$content" | sed 's/\x1b\[[0-9;]*m//g')
+  local visible_len=${#stripped}
+  local pad=$((inner - visible_len))
   ((pad < 0)) && pad=0
-  local spaces
-  printf -v spaces '%*s' "$pad" ""
-  printf '%b  %s%s%b\n' "${BORDER}║${RST}" "$content" "$spaces" "${BORDER}║${RST}"
+  printf "${BORDER}║${RST}  %b%*s${BORDER}║${RST}\n" "$content" "$pad" ""
 }
 
-# Print a section header with colored label
-section_header() {
-  local color="$1" title="$2"
-  local prefix="${BORDER}║${RST}  ${color}${BOLD}${title}${RST}"
-  box_line "${color}${BOLD}${title}${RST}"
-}
-
-# Print a tree item (├─ or └─)
+# Print a tree item (├─ or └─) with colors
 tree_item() {
-  local connector="$1" name="$2" detail="${3:-}"
+  local connector="$1" name="$2" detail="${3:-}" color="${4:-$WHITE}"
   if [[ -n "$detail" ]]; then
-    box_line "${DARKGRAY}${connector}${RST} ${WHITE}${name}${RST}$(printf '%*s' $((22 - ${#name})) '')${DARKGRAY}${detail}${RST}"
+    local gap=$((22 - ${#name}))
+    ((gap < 1)) && gap=1
+    box_line "${DARKGRAY}${connector}${RST} ${color}${name}${RST}$(printf '%*s' "$gap" '')${GRAY}${detail}${RST}"
   else
-    box_line "${DARKGRAY}${connector}${RST} ${WHITE}${name}${RST}"
+    box_line "${DARKGRAY}${connector}${RST} ${color}${name}${RST}"
   fi
 }
 
@@ -140,10 +125,10 @@ render() {
   # Top border
   local title="Claude Code System Map"
   local title_len=${#title}
-  local fill=$((WIDTH - title_len - 6))  # "╔══ " (4) + " ╗" (2)
-  printf '%b' "${BORDER}╔══${RST} ${HEADER}${BOLD}${title}${RST} ${BORDER}"
+  local fill=$((WIDTH - title_len - 6))
+  printf "${BORDER}╔══${RST} ${HEADER}${BOLD}%s${RST} ${BORDER}" "$title"
   repeat_char "═" "$fill"
-  printf '%b\n' "╗${RST}"
+  printf '╗\n'
 
   # Summary stats
   box_line ""
@@ -151,7 +136,7 @@ render() {
   box_line ""
 
   # MCP Servers
-  section_header "$C_MCP" "mcp servers"
+  box_line "${C_MCP}${BOLD}mcp servers${RST}"
   local items=()
   while IFS= read -r server; do
     [[ -z "$server" ]] && continue
@@ -162,93 +147,94 @@ render() {
     items+=("${server}|${cmd}")
   done < <(gather_mcp_servers)
   if [[ ${#items[@]} -eq 0 ]]; then
-    box_line "${DARKGRAY}(none detected)${RST}"
+    box_line "  ${DARKGRAY}(none detected)${RST}"
   else
     for ((i = 0; i < ${#items[@]}; i++)); do
       local name="${items[$i]%%|*}" detail="${items[$i]#*|}"
       local conn="├─"
       ((i == ${#items[@]} - 1)) && conn="└─"
-      tree_item "$conn" "$name" "$detail"
+      tree_item "$conn" "$name" "$detail" "$WHITE"
     done
   fi
   box_line ""
 
   # Plugins
-  section_header "$C_PLUGIN" "plugins"
+  box_line "${C_FILE}${BOLD}plugins${RST}"
   items=()
   while IFS= read -r plugin; do
     [[ -z "$plugin" ]] && continue
     items+=("$plugin")
   done < <(gather_plugins)
   if [[ ${#items[@]} -eq 0 ]]; then
-    box_line "${DARKGRAY}(none installed)${RST}"
+    box_line "  ${DARKGRAY}(none installed)${RST}"
   else
     for ((i = 0; i < ${#items[@]}; i++)); do
       local conn="├─"
       ((i == ${#items[@]} - 1)) && conn="└─"
-      tree_item "$conn" "${items[$i]}"
+      tree_item "$conn" "${items[$i]}" "" "$WHITE"
     done
   fi
   box_line ""
 
   # Agents
-  section_header "$C_AGENT" "agents"
+  box_line "${C_AGENT}${BOLD}agents${RST}"
   items=()
   while IFS= read -r agent; do
     [[ -z "$agent" ]] && continue
     items+=("$agent")
   done < <(gather_agents)
   if [[ ${#items[@]} -eq 0 ]]; then
-    box_line "${DARKGRAY}(none in .claude/agents/)${RST}"
+    box_line "  ${DARKGRAY}(none in .claude/agents/)${RST}"
   else
     for ((i = 0; i < ${#items[@]}; i++)); do
       local conn="├─"
       ((i == ${#items[@]} - 1)) && conn="└─"
-      tree_item "$conn" "${items[$i]}"
+      tree_item "$conn" "${items[$i]}" "" "$WHITE"
     done
   fi
   box_line ""
 
   # Skills
-  section_header "$C_SKILL" "skills"
+  box_line "${C_SKILL}${BOLD}skills${RST}"
   items=()
   while IFS= read -r skill; do
     [[ -z "$skill" ]] && continue
     items+=("$skill")
   done < <(gather_skills)
   if [[ ${#items[@]} -eq 0 ]]; then
-    box_line "${DARKGRAY}(none in .claude/skills/)${RST}"
+    box_line "  ${DARKGRAY}(none in .claude/skills/)${RST}"
   else
     for ((i = 0; i < ${#items[@]}; i++)); do
       local conn="├─"
       ((i == ${#items[@]} - 1)) && conn="└─"
-      tree_item "$conn" "${items[$i]}"
+      tree_item "$conn" "${items[$i]}" "" "$WHITE"
     done
   fi
   box_line ""
 
   # Hooks
-  section_header "$C_HOOK" "hooks"
+  box_line "${C_HOOK}${BOLD}hooks${RST}"
   items=()
   while IFS= read -r hook; do
     [[ -z "$hook" ]] && continue
     items+=("$hook")
   done < <(gather_hooks)
   if [[ ${#items[@]} -eq 0 ]]; then
-    box_line "${DARKGRAY}(none detected)${RST}"
+    box_line "  (none detected)"
   else
     for ((i = 0; i < ${#items[@]}; i++)); do
       local conn="├─"
       ((i == ${#items[@]} - 1)) && conn="└─"
-      tree_item "$conn" "${items[$i]}"
+      tree_item "$conn" "${items[$i]}" "" "$WHITE"
     done
   fi
   box_line ""
 
   # Bottom border
-  printf '%b' "${BORDER}╚"
+  printf "${BORDER}╚"
   repeat_char "═" $((WIDTH - 2))
-  printf '%b\n' "╝${RST}"
+  printf '╝\n'
+  printf "${RST}"
 }
 
 render
