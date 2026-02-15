@@ -6,6 +6,22 @@
 
 set -euo pipefail
 
+# Find project root (look for .mcp.json or .git in current dir or parents)
+find_project_root() {
+  local dir="$PWD"
+  while [[ "$dir" != "/" ]]; do
+    if [[ -f "$dir/.mcp.json" ]] || [[ -d "$dir/.git" && -d "$dir/.claude" ]]; then
+      echo "$dir"
+      return
+    fi
+    dir=$(dirname "$dir")
+  done
+  echo "$PWD"
+}
+
+PROJECT_ROOT=$(find_project_root)
+cd "$PROJECT_ROOT"
+
 CLAUDE_DIR="${HOME}/.claude"
 PROJECT_CLAUDE_DIR=".claude"
 WIDTH=58
