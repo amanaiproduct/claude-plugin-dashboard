@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
 # Dashboard Plugin - SessionStart Hook
-# Injects per-turn tool badge rendering instructions.
-# Theme: Sunset (ANSI 256-color via Bash echo -e)
+# Instructs Claude to render a compact badge directly in the response.
+# Uses glyph tags + code spans for stable client-side styling.
 
 MODE="badge"
 for candidate in \
@@ -36,7 +36,7 @@ cat << OUTER_EOF
 {
   "hookSpecificOutput": {
     "hookEventName": "SessionStart",
-    "additionalContext": "## Tool Badge\n\nAfter EVERY response where you used tools, output a tool marker as the LAST line of your response. A Stop hook will pick it up and render a colored badge.\n\n### Categories\nmcp (mcp__* tools, show server name) · file (Read,Write,Edit,Glob,Grep,NotebookEdit) · agent (Task) · sh (Bash) · web (WebSearch,WebFetch) · skill (Skill) · todo (TaskCreate,TaskUpdate,TaskList,TaskGet)\n\n### Format\nOutput this exact pattern as your last line:\n[tools: category:tools category:tools]\n\nExample: [tools: file:Read,Grep sh:git mcp:manager-ai]\n\nRules:\n- Space-separated category:tools pairs inside [tools: ...]\n- Omit unused categories\n- This marker will be processed by a Stop hook that renders sunset ANSI colors"
+    "additionalContext": "## Tool Badge\n\nAfter EVERY response where you used tools, render a compact tool badge as the LAST line(s) of your response.\n\n### Categories\nmcp (mcp__* tools, show server name) · file (Read,Write,Edit,Glob,Grep,NotebookEdit) · agent (Task) · sh (Bash) · web (WebSearch,WebFetch) · skill (Skill) · todo (TaskCreate,TaskUpdate,TaskList,TaskGet)\n\n### Badge Mode (current: badge)\nUse compact chips with minimal spacing:\n◆`mcp:manager-ai:list_tasks,create_task` ●`file:read,glob` ▸`sh:git`\n\n### Overflow Rules\n- If badge exceeds ~100 chars OR more than 3 chips, wrap to a second line\n- Second line starts with: ↳\n- Keep each chip intact when wrapping (do not split inside a chip)\n\n### Normalization Rules\n- Lowercase tool names in chips (read, write, glob, grep, websearch)\n- Deduplicate repeated tools in same category\n- Keep order: mcp, file, agent, sh, web, skill, todo\n- No spaces inside code spans\n- Do NOT output [tools: ...] markers\n- Do NOT call Bash to render badges\n- If no tools were used, output no badge"
   }
 }
 OUTER_EOF
